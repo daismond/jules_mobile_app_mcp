@@ -98,7 +98,7 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
-        '/': (context) => const ChatScreen(),
+        '/': (context) => ChatScreen(),
         '/settings': (context) => const SettingsScreen(),
       },
       debugShowCheckedModeBanner: false,

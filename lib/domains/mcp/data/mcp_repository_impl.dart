@@ -2,13 +2,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_chat_desktop/domains/settings/entity/mcp_server_config.dart';
 import 'package:mcp_dart/mcp_dart.dart';
+import 'package:mcp_dart/src/shared/transport.dart';
 
 import '../entity/mcp_models.dart';
 import '../repository/mcp_repository.dart';
 import 'mcp_client.dart';
 import 'transports/http_mcp_transport.dart';
 import 'transports/stdio_mcp_transport.dart';
-import 'client_transport.dart';
+
 
 /// Implémentation de McpRepository.
 /// Gère les clients MCP, leur cycle de vie,
@@ -113,7 +114,7 @@ class McpRepositoryImpl implements McpRepository {
       _updateStatus(config.id, McpConnectionStatus.connecting);
 
       // Création du transport selon le mode
-      late final ClientTransport transport;
+      late final Transport transport;
       if (config.connectionMode == McpConnectionMode.http) {
         if (config.address == null || config.address!.isEmpty) {
           throw Exception(

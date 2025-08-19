@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:mcp_dart/mcp_dart.dart' as mcp_dart;
+import 'package:mcp_dart/mcp_dart.dart';
+import 'package:mcp_dart/src/types.dart';
 
 import '../client_transport.dart';
-import '../message.dart';
 
 /// An MCP transport that communicates with a local process over stdio.
-class StdioMcpTransport implements ClientTransport, mcp_dart.Transport {
+class StdioMcpTransport implements ClientTransport {
   final String command;
   final String? args;
   final String? workingDirectory;
@@ -21,21 +21,29 @@ class StdioMcpTransport implements ClientTransport, mcp_dart.Transport {
   Completer<void>? _exitCodeCompleter;
 
   @override
-  Function(mcp_dart.Message)? onmessage;
+  void Function(JsonRpcMessage message)? onmessage;
 
   @override
-  Function(dynamic)? onerror;
+  void Function(Error error)? onerror;
 
   @override
   Function()? onclose;
+
+  @override
+  String? get sessionId => _process?.pid.toString();
 
   StdioMcpTransport({
     required this.command,
     this.args,
     this.workingDirectory,
     this.environment = const {},
-  }) {
-    _startProcess();
+  });
+
+  @override
+  Future<void> start() async {
+    if (_process == null) {
+      await _startProcess();
+    }
   }
 
   Future<void> _startProcess() async {
@@ -68,7 +76,7 @@ class StdioMcpTransport implements ClientTransport, mcp_dart.Transport {
           .transform(const LineSplitter())
           .listen((line) {
         debugPrint('StdioTransport [stderr]: $line');
-        onerror?.call(line);
+        onerror?.call(ArgumentError(line));
       });
 
       // Handle stdout
@@ -81,18 +89,18 @@ class StdioMcpTransport implements ClientTransport, mcp_dart.Transport {
             if (line.trim().isEmpty) return;
             debugPrint('StdioTransport [stdout]: Received line: $line');
             final json = jsonDecode(line);
-            final message = Message.fromJson(json);
+            final message = JsonRpcMessage.fromJson(json);
             onmessage?.call(message);
           } catch (e) {
             final errorMsg = 'StdioTransport: Error parsing message: $e';
             debugPrint(errorMsg);
-            onerror?.call(errorMsg);
+            onerror?.call(ArgumentError(errorMsg));
           }
         },
         onError: (error) {
           final errorMsg = 'StdioTransport: Error on stdout stream: $error';
           debugPrint(errorMsg);
-          onerror?.call(errorMsg);
+          onerror?.call(ArgumentError(errorMsg));
         },
         onDone: () {
           debugPrint('StdioTransport: stdout stream closed.');
@@ -104,18 +112,18 @@ class StdioMcpTransport implements ClientTransport, mcp_dart.Transport {
     } catch (e) {
       final errorMsg = 'StdioTransport: Failed to start process: $e';
       debugPrint(errorMsg);
-      onerror?.call(errorMsg);
+      onerror?.call(ArgumentError(errorMsg));
       // Ensure we close/cleanup if start fails
       await close();
     }
   }
 
   @override
-  Future<void> send(mcp_dart.Message message) async {
+  Future<void> send(JsonRpcMessage message) async {
     if (_process == null) {
       final errorMsg = 'StdioTransport: Cannot send message, process not running.';
       debugPrint(errorMsg);
-      onerror?.call(errorMsg);
+      onerror?.call(ArgumentError(errorMsg));
       return;
     }
     try {
@@ -126,7 +134,7 @@ class StdioMcpTransport implements ClientTransport, mcp_dart.Transport {
     } catch (e) {
       final errorMsg = 'StdioTransport: Failed to write to stdin: $e';
       debugPrint(errorMsg);
-      onerror?.call(errorMsg);
+      onerror?.call(ArgumentError(errorMsg));
     }
   }
 

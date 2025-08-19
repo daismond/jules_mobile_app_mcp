@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../message.dart';
+import 'package:mcp_dart/mcp_dart.dart';
+import 'package:mcp_dart/src/types.dart';
 
 import '../client_transport.dart';
 
@@ -11,30 +12,24 @@ class HttpMcpTransport implements ClientTransport {
   final http.Client _httpClient;
 
   @override
-  Function(Message)? onmessage;
+  void Function(JsonRpcMessage message)? onmessage;
 
   @override
-  Function(dynamic)? onerror;
+  void Function(Error error)? onerror;
 
   @override
   Function()? onclose;
+
+  @override
+  String? get sessionId => null;
 
   HttpMcpTransport({required String serverAddress})
       : serverUri = Uri.parse(serverAddress),
         _httpClient = http.Client();
 
   @override
-  Future<void> connect() async {
-    try {
-      // A simple GET request to a health check endpoint to see if server is up.
-      final response = await _httpClient.get(serverUri.resolve('/health'));
-      if (response.statusCode != 200) {
-        throw Exception('Server health check failed: [31m[0m');
-      }
-    } catch (e) {
-      onerror?.call(e);
-      rethrow;
-    }
+  Future<void> start() async {
+    // No-op for HTTP transport
   }
 
   @override
@@ -44,7 +39,7 @@ class HttpMcpTransport implements ClientTransport {
   }
 
   @override
-  Future<void> send(Message message) async {
+  Future<void> send(JsonRpcMessage message) async {
     try {
       final response = await _httpClient.post(
         serverUri.resolve('/call'), // A standard endpoint for all calls
@@ -54,21 +49,17 @@ class HttpMcpTransport implements ClientTransport {
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
-        final replyMessage = Message.fromJson(responseBody);
+        final replyMessage = JsonRpcMessage.fromJson(responseBody);
         // The mcp_dart Client is waiting for this callback.
         onmessage?.call(replyMessage);
       } else {
         // Create a proper error message and send it back
-        final errorContent = 'Server returned error: [31m[0m';
-        final errorMessage = Message(
-          id: 'error-${DateTime.now().millisecondsSinceEpoch}',
-          type: 'response',
-          error: {'message': errorContent},
-        );
+        final errorContent = 'Server returned error: ${response.statusCode}';
+        final errorMessage = JsonRpcResponse(id: 'error-${DateTime.now().millisecondsSinceEpoch}', result: {'error': JsonRpcError(id: 'error-${DateTime.now().millisecondsSinceEpoch}', error: JsonRpcErrorData(code: -32000, message: errorContent))});
         onmessage?.call(errorMessage);
       }
     } catch (e) {
-      onerror?.call(e);
+      onerror?.call(e as Error);
     }
   }
 }

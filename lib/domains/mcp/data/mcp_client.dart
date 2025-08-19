@@ -3,12 +3,11 @@ import 'package:mcp_dart/mcp_dart.dart';
 import 'package:mcp_dart/src/shared/transport.dart';
 
 import '../entity/mcp_models.dart';
-import 'client_transport.dart';
 
 class McpClient {
   final String serverId;
   final Client mcp;
-  ClientTransport? _transport; // Changed to generic transport
+  Transport? _transport; // Changed to generic transport
   List<McpToolDefinition> _tools = [];
   bool _isConnected = false;
 
@@ -37,7 +36,7 @@ class McpClient {
     _onClose = onClose;
   }
 
-  Future<void> connectWithTransport(ClientTransport transport) async {
+  Future<void> connectWithTransport(Transport transport) async {
     if (_isConnected) return;
 
     debugPrint("McpClient [$serverId]: Connecting with transport...");
@@ -60,7 +59,7 @@ class McpClient {
         _tools = [];
       };
 
-      await mcp.connect(_transport! as Transport);
+      await mcp.connect(_transport!);
       _isConnected = true;
       debugPrint(
         "McpClient [$serverId]: Connected successfully. Fetching tools...",

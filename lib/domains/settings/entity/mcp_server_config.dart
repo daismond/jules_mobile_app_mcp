@@ -20,6 +20,7 @@ class McpServerConfig {
   // Stdio-specific fields
   final String? command;
   final String? args;
+  final String? workingDirectory; // Added this field
   final Map<String, String> customEnvironment;
 
   // HTTP-specific fields
@@ -32,6 +33,7 @@ class McpServerConfig {
     this.connectionMode = McpConnectionMode.stdio,
     this.command,
     this.args,
+    this.workingDirectory, // Added to constructor
     this.customEnvironment = const {},
     this.address,
   }) : assert(
@@ -47,6 +49,7 @@ class McpServerConfig {
     McpConnectionMode? connectionMode,
     String? command,
     String? args,
+    String? workingDirectory, // Added to copyWith
     Map<String, String>? customEnvironment,
     String? address,
   }) {
@@ -57,6 +60,7 @@ class McpServerConfig {
       connectionMode: connectionMode ?? this.connectionMode,
       command: command ?? this.command,
       args: args ?? this.args,
+      workingDirectory: workingDirectory ?? this.workingDirectory, // Added here
       customEnvironment: customEnvironment ?? this.customEnvironment,
       address: address ?? this.address,
     );
@@ -69,6 +73,7 @@ class McpServerConfig {
     'connectionMode': connectionMode.toJson(),
     'command': command,
     'args': args,
+    'workingDirectory': workingDirectory, // Added to toJson
     'customEnvironment': customEnvironment,
     'address': address,
   };
@@ -99,6 +104,7 @@ class McpServerConfig {
               : McpConnectionMode.stdio,
       command: json['command'] as String?,
       args: json['args'] as String?,
+      workingDirectory: json['workingDirectory'] as String?, // Added fromJson
       customEnvironment: environment,
       address: json['address'] as String?,
     );
@@ -115,6 +121,7 @@ class McpServerConfig {
           connectionMode == other.connectionMode &&
           command == other.command &&
           args == other.args &&
+          workingDirectory == other.workingDirectory && // Added to equality
           address == other.address &&
           const MapEquality().equals(
             customEnvironment,
@@ -129,6 +136,7 @@ class McpServerConfig {
       connectionMode.hashCode ^
       command.hashCode ^
       args.hashCode ^
+      workingDirectory.hashCode ^ // Added to hashCode
       address.hashCode ^
       const MapEquality().hash(customEnvironment);
 }
