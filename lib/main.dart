@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_desktop/providers/settings_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'domains/settings/data/settings_repository_impl.dart';
@@ -81,6 +82,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return MaterialApp(
       title: 'Gemini Chat Desktop (Refactored)',
       theme: ThemeData(
@@ -88,8 +90,11 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        textTheme: GoogleFonts.latoTextTheme(textTheme),
       ),
-      darkTheme: ThemeData.dark(useMaterial3: true),
+      darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
+        textTheme: GoogleFonts.latoTextTheme(ThemeData.dark().textTheme),
+      ),
       themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {

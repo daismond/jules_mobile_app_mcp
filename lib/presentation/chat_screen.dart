@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_chat_desktop/providers/mcp_providers.dart';
 import 'package:flutter_chat_desktop/providers/settings_providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package.flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/chat_providers.dart';
 import 'widgets/chat_input_field.dart';
@@ -161,7 +162,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 return MessageBubble(
                   message: message,
                   serverConfigs: serverConfigs,
-                );
+                )
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideY(begin: 0.5, end: 0.0, curve: Curves.easeOut);
               },
             ),
           ),
