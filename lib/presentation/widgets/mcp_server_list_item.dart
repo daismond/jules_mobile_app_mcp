@@ -24,107 +24,69 @@ class McpServerListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bool userWantsActive = server.isActive;
-    final int customEnvCount = server.customEnvironment.length;
+    final bool isEnabled = server.isActive;
+    final bool hasError = errorMessage != null;
+
+    String getSubtitle() {
+      final details = server.connectionMode == McpConnectionMode.stdio
+          ? server.command ?? 'N/A'
+          : server.address ?? 'N/A';
+      final envCount = server.customEnvironment.length;
+      if (envCount > 0) {
+        return '$details • $envCount env var(s)';
+      }
+      return details;
+    }
 
     return Card(
-      elevation: userWantsActive ? 2 : 1,
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: Tooltip(
-              message: status.name,
-              child: McpConnectionStatusIndicator(status: status),
+      elevation: isEnabled ? 2.0 : 0.5,
+      margin: const EdgeInsets.symmetric(vertical: 6.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        side: hasError
+            ? BorderSide(color: theme.colorScheme.error, width: 1)
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: ListTile(
+          leading: McpConnectionStatusIndicator(status: status),
+          title: Text(
+            server.name,
+            style: TextStyle(
+              fontWeight: isEnabled ? FontWeight.bold : FontWeight.normal,
+              color: isEnabled ? theme.textTheme.bodyLarge?.color : Colors.grey,
             ),
-            trailing: Switch(
-              value: userWantsActive,
-              onChanged: (bool value) => onToggleActive(server.id, value),
-              activeColor: theme.colorScheme.primary,
-            ),
-            title: Text(
-              server.name,
-              style: TextStyle(
-                fontWeight:
-                    userWantsActive ? FontWeight.bold : FontWeight.normal,
+          ),
+          subtitle: Text(
+            getSubtitle(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Switch(
+                value: isEnabled,
+                onChanged: (bool value) => onToggleActive(server.id, value),
               ),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${server.command} ${server.args}'.trim(),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Edit Server',
+                onPressed: () => onEdit(server),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: theme.colorScheme.error,
                 ),
-                if (customEnvCount > 0)
-                  Text(
-                    '$customEnvCount custom env var(s)',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.blueGrey,
-                    ),
-                  ),
-              ],
-            ),
-            onLongPress: () => onEdit(server),
+                tooltip: 'Delete Server',
+                onPressed: () => onDelete(server),
+              ),
+            ],
           ),
-          // Error and Action Row
-          Padding(
-            padding: const EdgeInsets.only(left: 52.0, right: 8.0, bottom: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child:
-                      errorMessage != null
-                          ? Tooltip(
-                            message: errorMessage!,
-                            child: Text(
-                              'Error: $errorMessage',
-                              style: TextStyle(
-                                color: theme.colorScheme.error,
-                                fontSize: 11,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                            ),
-                          )
-                          : const SizedBox(height: 14),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_note, size: 20),
-                      tooltip: 'Edit Server',
-                      onPressed: () => onEdit(server),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        Icons.delete_outline,
-                        size: 20,
-                        color: theme.colorScheme.error,
-                      ),
-                      tooltip: 'Delete Server',
-                      onPressed: () => onDelete(server),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

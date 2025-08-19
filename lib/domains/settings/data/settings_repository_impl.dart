@@ -1,42 +1,33 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../entity/mcp_server_config.dart';
 import '../repository/settings_repository.dart';
 
 // Storage keys are implementation details of the data layer.
-const String _apiKeyStorageKey = 'geminiApiKey';
+const String apiKeyStorageKey = 'geminiApiKey';
 const String mcpServerListKey = 'mcpServerList';
 
-/// Implementation of SettingsRepository using SharedPreferences and FlutterSecureStorage.
+/// Implementation of SettingsRepository using SharedPreferences.
 class SettingsRepositoryImpl implements SettingsRepository {
   final SharedPreferences _prefs;
-  // Use const constructor for secure storage
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   SettingsRepositoryImpl(this._prefs);
 
-  // --- API Key (using FlutterSecureStorage) ---
+  // --- API Key ---
   @override
   Future<String?> getApiKey() async {
-    try {
-      return await _secureStorage.read(key: _apiKeyStorageKey);
-    } catch (e) {
-      debugPrint("Error reading API key from secure storage: $e");
-      // Optionally handle specific errors, e.g., platform exceptions
-      return null;
-    }
+    return _prefs.getString(apiKeyStorageKey);
   }
 
   @override
   Future<void> saveApiKey(String apiKey) async {
     try {
-      await _secureStorage.write(key: _apiKeyStorageKey, value: apiKey);
+      await _prefs.setString(apiKeyStorageKey, apiKey);
     } catch (e) {
-      debugPrint("Error saving API key to secure storage: $e");
+      debugPrint("Error saving API key in repository: $e");
       rethrow; // Rethrow to allow service layer to handle UI feedback
     }
   }
@@ -44,14 +35,14 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<void> clearApiKey() async {
     try {
-      await _secureStorage.delete(key: _apiKeyStorageKey);
+      await _prefs.remove(apiKeyStorageKey);
     } catch (e) {
-      debugPrint("Error clearing API key from secure storage: $e");
+      debugPrint("Error clearing API key in repository: $e");
       rethrow;
     }
   }
 
-  // --- MCP Server List (using SharedPreferences) ---
+  // --- MCP Server List ---
   @override
   Future<List<McpServerConfig>> getMcpServerList() async {
     try {

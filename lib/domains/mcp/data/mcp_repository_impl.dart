@@ -7,7 +7,6 @@ import '../entity/mcp_models.dart';
 import '../repository/mcp_repository.dart';
 import 'mcp_client.dart';
 import 'transports/http_mcp_transport.dart';
-import 'transports/stdio_mcp_transport.dart';
 import 'client_transport.dart';
 
 /// Implémentation de McpRepository.
@@ -122,16 +121,9 @@ class McpRepositoryImpl implements McpRepository {
         }
         transport = HttpMcpTransport(serverAddress: config.address!);
       } else if (config.connectionMode == McpConnectionMode.stdio) {
-        if (config.command == null || config.command!.isEmpty) {
-          throw Exception(
-            'Commande manquante pour le serveur stdio ${config.id}',
-          );
-        }
-        transport = StdioMcpTransport(
-          command: config.command!,
-          args: config.args,
-          workingDirectory: config.workingDirectory,
-          environment: config.customEnvironment,
+        // TODO: Implémenter le transport stdio
+        throw UnimplementedError(
+          'Le transport stdio n\'est pas encore implémenté',
         );
       } else {
         throw Exception(
