@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_desktop/providers/mcp_providers.dart';
 import 'package:flutter_chat_desktop/providers/settings_providers.dart';
@@ -30,13 +33,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _sendMessage() {
     final text = _textController.text;
-    if (text.trim().isNotEmpty) {
+    // Also check if there is a pending image
+    if (text.trim().isNotEmpty ||
+        ref.read(chatProvider).pendingImageBytes != null) {
       final messageToSend = text.trim();
       _textController.clear();
       // Call the notifier method to send the message
       ref.read(chatProvider.notifier).sendMessage(messageToSend);
     }
     // Refocus handled by listener on isLoading change
+  }
+
+  Future<void> _attachImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true, // Important to get bytes
+    );
+
+    if (result != null && result.files.single.bytes != null) {
+      final imageBytes = result.files.single.bytes!;
+      ref.read(chatProvider.notifier).setPendingImage(imageBytes);
+    }
   }
 
   void _clearChat() {
@@ -96,6 +113,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final messages = chatState.displayMessages;
     final isLoading = chatState.isLoading;
     final isApiKeySet = chatState.isApiKeySet;
+    final pendingImage = chatState.pendingImageBytes;
     final connectedServerCount = mcpState.connectedServerCount;
 
     // --- Listeners ---
@@ -166,6 +184,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ),
 
+          // Attachment Preview
+          if (pendingImage != null)
+            Padding(
+              padding:
+                  const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 4),
+              child: Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 150),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: Image.memory(pendingImage, fit: BoxFit.contain),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const CircleAvatar(
+                      backgroundColor: Colors.black54,
+                      child: Icon(Icons.close, color: Colors.white, size: 18),
+                    ),
+                    onPressed: () {
+                      ref.read(chatProvider.notifier).setPendingImage(null);
+                    },
+                    tooltip: 'Remove Image',
+                  ),
+                ],
+              ),
+            ),
+
           // Chat input field at bottom
           ChatInputField(
             controller: _textController,
@@ -174,6 +225,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             isLoading: isLoading,
             isApiKeySet: isApiKeySet,
             onSend: _sendMessage,
+            onAttach: _attachImage,
           ),
         ],
       ),

@@ -7,6 +7,7 @@ class ChatInputField extends StatelessWidget {
   final bool isLoading;
   final bool isApiKeySet;
   final VoidCallback onSend;
+  final VoidCallback onAttach;
 
   const ChatInputField({
     super.key,
@@ -16,6 +17,7 @@ class ChatInputField extends StatelessWidget {
     required this.isLoading,
     required this.isApiKeySet,
     required this.onSend,
+    required this.onAttach,
   });
 
   @override
@@ -58,6 +60,11 @@ class ChatInputField extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8.0),
+              IconButton(
+                icon: const Icon(Icons.attach_file),
+                onPressed: enabled ? onAttach : null,
+                tooltip: 'Attach Image',
+              ),
               IconButton(
                 icon: const Icon(Icons.send),
                 onPressed: enabled ? onSend : null,

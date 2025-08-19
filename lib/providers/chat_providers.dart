@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
+import 'package.flutter/foundation.dart';
 import 'package:flutter_chat_desktop/domains/ai/entity/ai_entities.dart';
 import 'package:flutter_chat_desktop/domains/ai/repository/ai_repository.dart';
 import 'package:flutter_chat_desktop/domains/chat/entity/chat_message.dart';
@@ -87,11 +88,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
   }
 
+  void setPendingImage(Uint8List? imageBytes) {
+    if (!mounted) return;
+    state = state.copyWith(
+      pendingImageBytes: () => imageBytes,
+    );
+  }
+
   // --- Message Sending Logic ---
   Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty || state.isLoading) {
+    final hasText = text.trim().isNotEmpty;
+    final hasImage = state.pendingImageBytes != null;
+
+    if ((!hasText && !hasImage) || state.isLoading) {
       debugPrint(
-        "ChatNotifier: sendMessage blocked (empty or loading: ${state.isLoading})",
+        "ChatNotifier: sendMessage blocked (empty and no image, or loading: ${state.isLoading})",
       );
       return;
     }
@@ -109,15 +120,33 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
 
     final userMessageText = text.trim();
+    final pendingImage = state.pendingImageBytes;
+
+    // Immediately clear pending image from state after grabbing it
+    if (pendingImage != null) {
+      setPendingImage(null);
+    }
+
     final userMessageForDisplay = ChatMessage(
       text: userMessageText,
       isUser: true,
+      imageBytes: pendingImage,
     );
-    final userMessageForHistory = AiContent.user(userMessageText);
-    final historyForApi = List<AiContent>.from(state.chatHistory);
-
     _addDisplayMessage(userMessageForDisplay);
     _setLoading(true);
+
+    // Prepare content for the API
+    final apiParts = <AiPart>[];
+    if (hasText) {
+      apiParts.add(AiTextPart(userMessageText));
+    }
+    if (pendingImage != null) {
+      // Assuming 'image/jpeg' for now. A more robust implementation
+      // might determine mimeType from file extension.
+      apiParts.add(AiDataPart('image/jpeg', pendingImage));
+    }
+    final userMessageForHistory = AiContent('user', parts: apiParts);
+    final historyForApi = List<AiContent>.from(state.chatHistory);
     final aiPlaceholderMessage = const ChatMessage(text: "", isUser: false);
     _addDisplayMessage(aiPlaceholderMessage);
 
@@ -129,11 +158,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       if (useMcp) {
-        // --- MCP Orchestration Path ---
+        // --- MCP Orchestration Path (Handles multimodal content) ---
         debugPrint("ChatNotifier: Orchestrating query via MCP...");
         final AiResponse finalAiResponse = await _orchestrateMcpQuery(
-          userMessageText,
-          historyForApi,
+          [...historyForApi, userMessageForHistory],
           aiRepo,
           _mcpRepo,
           mcpState,
@@ -153,10 +181,30 @@ class ChatNotifier extends StateNotifier<ChatState> {
           );
           _updateLastDisplayMessage(finalMessage);
           state = state.copyWith(chatHistory: historyUpdate);
-          _setLoading(false);
+        }
+      } else if (hasImage) {
+        // --- Direct AI Non-Streaming Path (for images) ---
+        debugPrint("ChatNotifier: Processing query via Direct AI (non-stream)...");
+        final response = await aiRepo.generateContent(
+          [...historyForApi, userMessageForHistory],
+        );
+
+        final finalContent = response.firstCandidateContent;
+        final historyUpdate = [
+          ...historyForApi,
+          userMessageForHistory,
+          if (finalContent != null) finalContent,
+        ];
+        if (mounted) {
+          final finalMessage = ChatMessage(
+            text: finalContent?.text ?? "(No response)",
+            isUser: false,
+          );
+          _updateLastDisplayMessage(finalMessage);
+          state = state.copyWith(chatHistory: historyUpdate);
         }
       } else {
-        // --- Direct AI Streaming Path ---
+        // --- Direct AI Streaming Path (text only) ---
         debugPrint("ChatNotifier: Processing query via Direct AI Stream...");
         final responseStream = aiRepo.sendMessageStream(
           userMessageText,
@@ -168,39 +216,26 @@ class ChatNotifier extends StateNotifier<ChatState> {
         _messageSubscription = responseStream.listen(
           (AiStreamChunk chunk) {
             if (!mounted || !state.isLoading) {
-              debugPrint(
-                "ChatNotifier: Stream chunk received but state changed. Cancelling.",
-              );
               _messageSubscription?.cancel();
-              _messageSubscription = null;
-              if (mounted && state.isLoading) _setLoading(false);
               return;
             }
             fullResponseBuffer.write(chunk.textDelta);
-            lastAiMessage = lastAiMessage.copyWith(
-              text: fullResponseBuffer.toString(),
-            );
+            lastAiMessage = lastAiMessage.copyWith(text: fullResponseBuffer.toString());
             _updateLastDisplayMessage(lastAiMessage);
           },
           onError: (error) {
-            debugPrint(
-              "ChatNotifier: Error receiving direct stream chunk: $error",
-            );
             _addErrorMessage(error.toString());
             _setLoading(false);
             _messageSubscription = null;
           },
           onDone: () {
-            debugPrint("ChatNotifier: Direct stream finished.");
             if (fullResponseBuffer.isNotEmpty && mounted) {
-              final aiContentForHistory = AiContent.model(
-                fullResponseBuffer.toString(),
-              );
+              final aiContentForHistory = AiContent.model(fullResponseBuffer.toString());
               state = state.copyWith(
                 chatHistory: [
                   ...historyForApi,
                   userMessageForHistory,
-                  aiContentForHistory,
+                  aiContentForHistory
                 ],
               );
             }
@@ -209,19 +244,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
           },
           cancelOnError: true,
         );
+        // Don't setLoading(false) here, it's handled by onDone/onError
+        return; // Exit early to avoid the final setLoading(false)
       }
     } catch (e) {
       debugPrint("ChatNotifier: Error in sendMessage: $e");
       _addErrorMessage(e.toString());
-      _setLoading(false);
-      _messageSubscription = null;
+    } finally {
+      // Ensure loading is turned off unless we are streaming
+      if (_messageSubscription == null) {
+        _setLoading(false);
+      }
     }
   }
 
   /// Orchestrates AI and MCP interactions with agentic behavior for multi-step reasoning.
   Future<AiResponse> _orchestrateMcpQuery(
-    String text,
-    List<AiContent> history,
+    List<AiContent> historyWithPrompt,
     AiRepository aiRepo,
     McpRepository mcpRepo,
     McpClientState mcpState,
@@ -250,12 +289,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return await aiRepo.generateContent([...history, AiContent.user(text)]);
     }
 
-    // Prepare history with agentic system prompt
-    final userMessage = AiContent.user(text);
-    final historyWithAgentPrompt = [...history, userMessage];
-
     // Agent state tracking
-    List<AiContent> agentConversation = [...historyWithAgentPrompt];
+    List<AiContent> agentConversation = List.from(historyWithPrompt);
     int iterationCount = 0;
     bool agentThinking = true;
 
@@ -273,10 +308,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         debugPrint("ChatNotifier: Agent iteration $iterationCount");
 
         // Get AI response with tools
-        final aiResponse = await aiRepo.generateContent(
-          agentConversation,
-          tools: [aiTool],
-        );
+        final aiResponse =
+            await aiRepo.generateContent(agentConversation, tools: [aiTool]);
 
         final aiContent = aiResponse.firstCandidateContent;
         if (aiContent == null) {
@@ -435,6 +468,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       displayMessages: [],
       chatHistory: [],
       isLoading: false,
+      pendingImageBytes: () => null,
     );
     debugPrint("ChatNotifier: Chat cleared.");
   }

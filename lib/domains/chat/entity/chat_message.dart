@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 
 /// Represents a single message in the chat interface.
@@ -5,6 +7,7 @@ import 'package:flutter/foundation.dart';
 class ChatMessage {
   final String text;
   final bool isUser;
+  final Uint8List? imageBytes; // Added for image support
   final String? toolName;
   final String? toolArgs; // Stored as JSON string for simplicity
   final String? toolResult; // Store the primary text result for display
@@ -14,6 +17,7 @@ class ChatMessage {
   const ChatMessage({
     required this.text,
     required this.isUser,
+    this.imageBytes,
     this.toolName,
     this.toolArgs,
     this.toolResult,
@@ -24,6 +28,7 @@ class ChatMessage {
   ChatMessage copyWith({
     String? text,
     bool? isUser,
+    Uint8List? imageBytes,
     String? toolName,
     String? toolArgs,
     String? toolResult,
@@ -34,6 +39,7 @@ class ChatMessage {
     return ChatMessage(
       text: text ?? this.text,
       isUser: isUser ?? this.isUser,
+      imageBytes: imageBytes ?? this.imageBytes,
       toolName: clearToolInfo ? null : toolName ?? this.toolName,
       toolArgs: clearToolInfo ? null : toolArgs ?? this.toolArgs,
       toolResult: clearToolInfo ? null : toolResult ?? this.toolResult,
@@ -51,6 +57,7 @@ class ChatMessage {
           runtimeType == other.runtimeType &&
           text == other.text &&
           isUser == other.isUser &&
+          imageBytes == other.imageBytes &&
           toolName == other.toolName &&
           toolArgs == other.toolArgs &&
           toolResult == other.toolResult &&
@@ -61,6 +68,7 @@ class ChatMessage {
   int get hashCode =>
       text.hashCode ^
       isUser.hashCode ^
+      imageBytes.hashCode ^
       toolName.hashCode ^
       toolArgs.hashCode ^
       toolResult.hashCode ^

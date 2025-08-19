@@ -23,21 +23,41 @@ class MessageBubble extends StatelessWidget {
     Widget messageContent;
     List<Widget> children = [];
 
-    // Render text or markdown
-    if (isUser) {
-      messageContent = SelectableText(message.text);
-    } else {
-      // Handle potential Markdown rendering errors gracefully
-      try {
-        messageContent = MarkdownBody(data: message.text, selectable: true);
-      } catch (e) {
-        debugPrint("Markdown rendering error: $e");
-        messageContent = SelectableText(
-          "Error rendering message content.\n\n${message.text}",
-        );
-      }
+    // Add image if it exists
+    if (message.imageBytes != null) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.0),
+            child: Image.memory(
+              message.imageBytes!,
+              // Add some constraints to prevent huge images
+              width: 300,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      );
     }
-    children.add(messageContent);
+
+    // Render text or markdown, but only if text is not empty
+    if (message.text.isNotEmpty) {
+      if (isUser) {
+        messageContent = SelectableText(message.text);
+      } else {
+        // Handle potential Markdown rendering errors gracefully
+        try {
+          messageContent = MarkdownBody(data: message.text, selectable: true);
+        } catch (e) {
+          debugPrint("Markdown rendering error: $e");
+          messageContent = SelectableText(
+            "Error rendering message content.\n\n${message.text}",
+          );
+        }
+      }
+      children.add(messageContent);
+    }
 
     // Add tool call information if present
     if (!isUser && message.toolName != null) {
