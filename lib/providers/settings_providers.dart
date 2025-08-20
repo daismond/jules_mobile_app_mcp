@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_chat_desktop/domains/settings/entity/ai_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -16,40 +17,27 @@ const _uuid = Uuid();
 /// the state providers to reflect changes in the application state.
 class SettingsService {
   final SettingsRepository _repository;
-  final StateController<String?> _apiKeyNotifier;
+  final StateController<AIConfig> _aiConfigNotifier;
   final StateController<List<McpServerConfig>> _mcpServerListNotifier;
 
   SettingsService({
     required SettingsRepository repository,
-    required StateController<String?> apiKeyNotifier,
+    required StateController<AIConfig> aiConfigNotifier,
     required StateController<List<McpServerConfig>> mcpServerListNotifier,
-  }) : _repository = repository,
-       _apiKeyNotifier = apiKeyNotifier,
-       _mcpServerListNotifier = mcpServerListNotifier;
+  })  : _repository = repository,
+        _aiConfigNotifier = aiConfigNotifier,
+        _mcpServerListNotifier = mcpServerListNotifier;
 
-  /// Saves the API key to the repository and updates the state.
-  Future<void> saveApiKey(String apiKey) async {
+  /// Saves the AI config to the repository and updates the state.
+  Future<void> saveAIConfig(AIConfig config) async {
     try {
-      await _repository.saveApiKey(apiKey);
+      await _repository.saveAIConfig(config);
       // Update the application state
-      _apiKeyNotifier.state = apiKey;
-      debugPrint("SettingsService: API Key saved.");
+      _aiConfigNotifier.state = config;
+      debugPrint("SettingsService: AI Config saved.");
     } catch (e) {
-      debugPrint("SettingsService: Error saving API key: $e");
+      debugPrint("SettingsService: Error saving AI Config: $e");
       rethrow; // Allow UI layer to handle error display
-    }
-  }
-
-  /// Clears the API key from the repository and updates the state.
-  Future<void> clearApiKey() async {
-    try {
-      await _repository.clearApiKey();
-      // Update the application state
-      _apiKeyNotifier.state = null;
-      debugPrint("SettingsService: API Key cleared.");
-    } catch (e) {
-      debugPrint("SettingsService: Error clearing API key: $e");
-      rethrow;
     }
   }
 
@@ -178,8 +166,8 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryImpl(prefs);
 });
 
-/// Holds the current API Key string (nullable).
-final apiKeyProvider = StateProvider<String?>((ref) => null);
+/// Holds the current AI Configuration.
+final aiConfigProvider = StateProvider<AIConfig>((ref) => const AIConfig());
 
 /// Holds the list of configured MCP servers. This is the source of truth for UI and MCP connection sync.
 final mcpServerListProvider = StateProvider<List<McpServerConfig>>((ref) => []);
@@ -188,13 +176,13 @@ final mcpServerListProvider = StateProvider<List<McpServerConfig>>((ref) => []);
 final settingsServiceProvider = Provider<SettingsService>((ref) {
   // Get dependencies from other providers
   final repository = ref.watch(settingsRepositoryProvider);
-  final apiKeyNotifier = ref.watch(apiKeyProvider.notifier);
+  final aiConfigNotifier = ref.watch(aiConfigProvider.notifier);
   final mcpServerListNotifier = ref.watch(mcpServerListProvider.notifier);
 
   // Create service with injected dependencies
   return SettingsService(
     repository: repository,
-    apiKeyNotifier: apiKeyNotifier,
+    aiConfigNotifier: aiConfigNotifier,
     mcpServerListNotifier: mcpServerListNotifier,
   );
 });

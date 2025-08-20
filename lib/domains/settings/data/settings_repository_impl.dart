@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_chat_desktop/domains/settings/entity/ai_config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,7 +9,7 @@ import '../entity/mcp_server_config.dart';
 import '../repository/settings_repository.dart';
 
 // Storage keys are implementation details of the data layer.
-const String _apiKeyStorageKey = 'geminiApiKey';
+const String _aiConfigKey = 'aiConfig';
 const String mcpServerListKey = 'mcpServerList';
 
 /// Implementation of SettingsRepository using SharedPreferences and FlutterSecureStorage.
@@ -19,37 +20,32 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   SettingsRepositoryImpl(this._prefs);
 
-  // --- API Key (using FlutterSecureStorage) ---
+  // --- AI Configuration (using FlutterSecureStorage) ---
   @override
-  Future<String?> getApiKey() async {
+  Future<AIConfig> getAIConfig() async {
     try {
-      return await _secureStorage.read(key: _apiKeyStorageKey);
+      final jsonString = await _secureStorage.read(key: _aiConfigKey);
+      if (jsonString != null && jsonString.isNotEmpty) {
+        return AIConfig.fromJson(jsonString);
+      }
     } catch (e) {
-      debugPrint("Error reading API key from secure storage: $e");
-      // Optionally handle specific errors, e.g., platform exceptions
-      return null;
+      debugPrint("Error reading AI config from secure storage: $e");
+      // Fallback to default config on error
     }
+    return const AIConfig(); // Return default config if not found or on error
   }
 
   @override
-  Future<void> saveApiKey(String apiKey) async {
+  Future<void> saveAIConfig(AIConfig config) async {
     try {
-      await _secureStorage.write(key: _apiKeyStorageKey, value: apiKey);
+      final jsonString = config.toJson();
+      await _secureStorage.write(key: _aiConfigKey, value: jsonString);
     } catch (e) {
-      debugPrint("Error saving API key to secure storage: $e");
+      debugPrint("Error saving AI config to secure storage: $e");
       rethrow; // Rethrow to allow service layer to handle UI feedback
     }
   }
 
-  @override
-  Future<void> clearApiKey() async {
-    try {
-      await _secureStorage.delete(key: _apiKeyStorageKey);
-    } catch (e) {
-      debugPrint("Error clearing API key from secure storage: $e");
-      rethrow;
-    }
-  }
 
   // --- MCP Server List (using SharedPreferences) ---
   @override

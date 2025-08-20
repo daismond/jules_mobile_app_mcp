@@ -1,38 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_chat_desktop/domains/ai/entity/ai_provider_type.dart';
+import 'package:flutter_chat_desktop/domains/settings/entity/ai_config.dart';
 
 class ApiKeySection extends StatelessWidget {
-  final TextEditingController controller;
-  final String? currentApiKey;
+  final AIConfig config;
+  final TextEditingController apiKeyController;
+  final ValueChanged<AIProviderType?> onProviderChanged;
   final Function() onSave;
   final Function() onClear;
 
   const ApiKeySection({
     super.key,
-    required this.controller,
-    required this.currentApiKey,
+    required this.config,
+    required this.apiKeyController,
+    required this.onProviderChanged,
     required this.onSave,
     required this.onClear,
   });
 
+  String _getProviderName(AIProviderType provider) {
+    switch (provider) {
+      case AIProviderType.gemini:
+        return 'Gemini';
+      case AIProviderType.openAI:
+        return 'OpenAI';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final providerName = _getProviderName(config.selectedProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Gemini API Key',
-          style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+        Text(
+          'AI Provider',
+          style: theme.textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8.0),
+        // Dropdown for selecting the AI provider
+        DropdownButtonFormField<AIProviderType>(
+          value: config.selectedProvider,
+          items: AIProviderType.values.map((provider) {
+            return DropdownMenuItem<AIProviderType>(
+              value: provider,
+              child: Text(_getProviderName(provider)),
+            );
+          }).toList(),
+          onChanged: onProviderChanged,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          ),
+        ),
+        const SizedBox(height: 16.0),
+        Text(
+          '$providerName API Key',
+          style: theme.textTheme.titleLarge,
         ),
         const SizedBox(height: 8.0),
         TextField(
-          controller: controller,
+          controller: apiKeyController,
           obscureText: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter your Gemini API Key',
-            border: OutlineInputBorder(),
-            suffixIcon: Icon(Icons.vpn_key),
+          decoration: InputDecoration(
+            hintText: 'Enter your $providerName API Key',
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.vpn_key),
           ),
           onSubmitted: (_) => onSave(),
         ),
@@ -45,7 +80,7 @@ class ApiKeySection extends StatelessWidget {
               label: const Text('Save Key'),
               onPressed: onSave,
             ),
-            if (currentApiKey != null && currentApiKey!.isNotEmpty)
+            if (config.currentApiKey != null && config.currentApiKey!.isNotEmpty)
               TextButton.icon(
                 icon: const Icon(Icons.clear),
                 label: const Text('Clear Key'),
@@ -58,7 +93,7 @@ class ApiKeySection extends StatelessWidget {
         ),
         const SizedBox(height: 4.0),
         const Text(
-          'Stored locally.',
+          'Stored securely on your device.',
           style: TextStyle(
             fontSize: 12.0,
             fontStyle: FontStyle.italic,
