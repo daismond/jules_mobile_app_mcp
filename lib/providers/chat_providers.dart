@@ -183,7 +183,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
               if (mounted && state.isLoading) _setLoading(false);
               return;
             }
-            fullResponseBuffer.write(chunk.textDelta);
+            fullResponseBuffer.write(chunk.text);
             lastAiMessage = lastAiMessage.copyWith(
               text: fullResponseBuffer.toString(),
             );
