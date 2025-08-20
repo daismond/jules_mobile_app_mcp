@@ -12,7 +12,7 @@ import 'client/google_generative_ai_client.dart';
 class AiRepositoryImpl implements AiRepository {
   final AiClient _client;
 
-  AiRepositoryImpl(String apiKey) : _client = GoogleGenerativeAiClient(apiKey);
+  AiRepositoryImpl(this._client);
 
   @override
   bool get isInitialized => _client.isInitialized;

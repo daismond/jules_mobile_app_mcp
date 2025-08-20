@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_chat_desktop/domains/ai/entity/ai_provider_type.dart';
+import 'package:flutter_chat_desktop/domains/settings/entity/ai_config.dart';
 import 'package:flutter_chat_desktop/providers/mcp_providers.dart';
 import 'package:flutter_chat_desktop/providers/settings_providers.dart';
 import 'package:flutter_chat_desktop/domains/mcp/entity/mcp_models.dart';
@@ -19,11 +21,14 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _apiKeyController;
+  late AIConfig _localAIConfig;
 
   @override
   void initState() {
     super.initState();
-    _apiKeyController = TextEditingController(text: ref.read(apiKeyProvider));
+    // Initialize local state from the provider
+    _localAIConfig = ref.read(aiConfigProvider);
+    _apiKeyController = TextEditingController(text: _localAIConfig.currentApiKey);
   }
 
   @override
@@ -40,33 +45,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _saveApiKey() {
-    final newApiKey = _apiKeyController.text.trim();
-    if (newApiKey.isNotEmpty) {
+  void _updateLocalApiKey() {
+    final currentKey = _apiKeyController.text.trim();
+    final currentProvider = _localAIConfig.selectedProvider;
+
+    setState(() {
+      final newApiKeys = Map<AIProviderType, String>.from(_localAIConfig.apiKeys);
+      newApiKeys[currentProvider] = currentKey;
+      _localAIConfig = _localAIConfig.copyWith(apiKeys: newApiKeys);
+    });
+  }
+
+  void _handleProviderChange(AIProviderType? newProvider) {
+    if (newProvider == null || newProvider == _localAIConfig.selectedProvider) {
+      return;
+    }
+
+    // Save the current text before switching
+    _updateLocalApiKey();
+
+    setState(() {
+      _localAIConfig = _localAIConfig.copyWith(selectedProvider: newProvider);
+      // Update the text field with the new provider's key
+      _apiKeyController.text = _localAIConfig.currentApiKey ?? '';
+    });
+  }
+
+  void _saveAIConfig() {
+    // Update the local state with the current text field value first
+    _updateLocalApiKey();
+
+    // Use the callback to wait for the state to be updated before saving
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
           .read(settingsServiceProvider)
-          .saveApiKey(newApiKey)
-          .then((_) => _showSnackbar('API Key Saved!'))
-          .catchError((e) => _showSnackbar('Error saving API Key: $e'));
-    } else {
-      _showSnackbar('API Key cannot be empty.');
-    }
-    FocusScope.of(context).unfocus();
+          .saveAIConfig(_localAIConfig)
+          .then((_) => _showSnackbar('Settings Saved!'))
+          .catchError((e) => _showSnackbar('Error saving settings: $e'));
+      FocusScope.of(context).unfocus();
+    });
   }
 
   void _clearApiKey() {
-    ref
-        .read(settingsServiceProvider)
-        .clearApiKey()
-        .then((_) {
-          _apiKeyController.clear();
-          _showSnackbar('API Key Cleared!');
-        })
-        .catchError((e) {
-          _showSnackbar('Error clearing API Key: $e');
-        });
-    FocusScope.of(context).unfocus();
+    final currentProvider = _localAIConfig.selectedProvider;
+    setState(() {
+      final newApiKeys = Map<AIProviderType, String>.from(_localAIConfig.apiKeys);
+      newApiKeys.remove(currentProvider);
+      _localAIConfig = _localAIConfig.copyWith(apiKeys: newApiKeys);
+      _apiKeyController.clear();
+    });
+
+    // Use the callback to wait for the state to be updated before saving
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _saveAIConfig();
+      _showSnackbar('${_getProviderName(currentProvider)} API Key Cleared!');
+    });
   }
+
+  String _getProviderName(AIProviderType provider) {
+    switch (provider) {
+      case AIProviderType.gemini:
+        return 'Gemini';
+      case AIProviderType.openAI:
+        return 'OpenAI';
+    }
+  }
+
 
   void _toggleServerActive(String serverId, bool isActive) {
     ref
@@ -141,7 +185,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentApiKey = ref.watch(apiKeyProvider);
+    // Watch the global provider to rebuild if it changes from elsewhere
+    ref.watch(aiConfigProvider);
     final serverList = ref.watch(mcpServerListProvider);
     final mcpState = ref.watch(mcpClientProvider);
 
@@ -156,9 +201,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           // --- API Key Section ---
           ApiKeySection(
-            controller: _apiKeyController,
-            currentApiKey: currentApiKey,
-            onSave: _saveApiKey,
+            config: _localAIConfig,
+            apiKeyController: _apiKeyController,
+            onProviderChanged: _handleProviderChange,
+            onSave: _saveAIConfig,
             onClear: _clearApiKey,
           ),
           const Divider(height: 24.0),

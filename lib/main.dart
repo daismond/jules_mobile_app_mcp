@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_chat_desktop/providers/settings_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,7 +14,8 @@ Future<void> main() async {
     final prefs = await SharedPreferences.getInstance();
 
     final initialSettingsRepo = SettingsRepositoryImpl(prefs);
-    final initialApiKey = await initialSettingsRepo.getApiKey();
+    // Load the full AI config instead of just the API key
+    final initialAIConfig = await initialSettingsRepo.getAIConfig();
     final initialServerList = await initialSettingsRepo.getMcpServerList();
 
     runApp(
@@ -26,7 +26,8 @@ Future<void> main() async {
             (ref) =>
                 SettingsRepositoryImpl(ref.watch(sharedPreferencesProvider)),
           ),
-          apiKeyProvider.overrideWith((ref) => initialApiKey),
+          // Override the new aiConfigProvider with the loaded value
+          aiConfigProvider.overrideWith((ref) => initialAIConfig),
           mcpServerListProvider.overrideWith((ref) => initialServerList),
         ],
         child: const MyApp(),
