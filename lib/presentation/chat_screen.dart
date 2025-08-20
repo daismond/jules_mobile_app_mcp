@@ -129,7 +129,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text('Gemini Chat'),
+            const Text('MCP AI Chat'),
             const Spacer(),
             McpConnectionCounter(connectedCount: connectedServerCount),
             const SizedBox(width: 8),

@@ -85,21 +85,30 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return MaterialApp(
-      title: 'Gemini Chat Desktop (Refactored)',
+      title: 'MCP AI Chat',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blueGrey,
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        textTheme: GoogleFonts.latoTextTheme(textTheme),
+        textTheme: GoogleFonts.interTextTheme(textTheme),
       ),
-      darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
-        textTheme: GoogleFonts.latoTextTheme(ThemeData.dark().textTheme),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blueGrey,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme.apply(
+              bodyColor: Colors.white,
+              displayColor: Colors.white,
+            )),
       ),
       themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
-        '/': (context) => ChatScreen(),
+        '/': (context) => const ChatScreen(),
         '/settings': (context) => const SettingsScreen(),
       },
       debugShowCheckedModeBanner: false,

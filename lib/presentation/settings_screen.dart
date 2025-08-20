@@ -199,73 +199,87 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // --- API Key Section ---
-          ApiKeySection(
-            config: _localAIConfig,
-            apiKeyController: _apiKeyController,
-            onProviderChanged: _handleProviderChange,
-            onSave: _saveAIConfig,
-            onClear: _clearApiKey,
-          ),
-          const Divider(height: 24.0),
-
-          // --- MCP Server Section ---
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Text(
-                'MCP Servers',
-                style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+          Card(
+            elevation: 2,
+            margin: const EdgeInsets.only(bottom: 16),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ApiKeySection(
+                config: _localAIConfig,
+                apiKeyController: _apiKeyController,
+                onProviderChanged: _handleProviderChange,
+                onSave: _saveAIConfig,
+                onClear: _clearApiKey,
               ),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                tooltip: 'Add New MCP Server',
-                onPressed: () => _openServerDialog(),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 4.0),
-          Text(
-            '$connectedCount server(s) connected. Changes are applied automatically.',
-            style: const TextStyle(fontSize: 12.0, color: Colors.grey),
-          ),
-          const SizedBox(height: 12.0),
-
-          // Server List Display
-          serverList.isEmpty
-              ? const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24.0),
-                child: Center(
-                  child: Text(
-                    "No MCP servers configured. Click '+' to add.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'MCP Servers',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        tooltip: 'Add New MCP Server',
+                        onPressed: () => _openServerDialog(),
+                      ),
+                    ],
                   ),
-                ),
-              )
-              : ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: serverList.length,
-                itemBuilder: (context, index) {
-                  final server = serverList[index];
-                  final status =
-                      serverStatuses[server.id] ??
-                      McpConnectionStatus.disconnected;
-                  final error = serverErrors[server.id];
+                  const SizedBox(height: 4.0),
+                  Text(
+                    '$connectedCount server(s) connected.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12.0),
+                  const Divider(),
+                  const SizedBox(height: 12.0),
+                  serverList.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24.0),
+                          child: Center(
+                            child: Text(
+                              "No MCP servers configured.\nClick '+' to add one.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: serverList.length,
+                          itemBuilder: (context, index) {
+                            final server = serverList[index];
+                            final status =
+                                serverStatuses[server.id] ??
+                                    McpConnectionStatus.disconnected;
+                            final error = serverErrors[server.id];
 
-                  return McpServerListItem(
-                    server: server,
-                    status: status,
-                    errorMessage: error,
-                    onToggleActive: _toggleServerActive,
-                    onEdit: (server) => _openServerDialog(serverToEdit: server),
-                    onDelete: _deleteServer,
-                  );
-                },
+                            return McpServerListItem(
+                              server: server,
+                              status: status,
+                              errorMessage: error,
+                              onToggleActive: _toggleServerActive,
+                              onEdit: (server) =>
+                                  _openServerDialog(serverToEdit: server),
+                              onDelete: _deleteServer,
+                            );
+                          },
+                        ),
+                ],
               ),
-          const SizedBox(height: 12.0),
+            ),
+          ),
         ],
       ),
     );
