@@ -47,7 +47,8 @@ class OpenAiClient implements AiClient {
           ? OpenAIChatMessageRole.user
           : OpenAIChatMessageRole.assistant;
 
-      final textContent = content.parts.map((p) => p.text).join();
+      final textContent =
+          content.parts.whereType<AiTextPart>().map((p) => p.text).join();
 
       return OpenAIChatCompletionChoiceMessageModel(
         role: role,
