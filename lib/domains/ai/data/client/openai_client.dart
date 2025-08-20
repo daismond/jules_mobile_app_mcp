@@ -9,13 +9,13 @@ import 'ai_client.dart';
 class OpenAiClient implements AiClient {
   final String _apiKey;
   bool _isInitialized = false;
-  Object? _initializationError;
+  String? _initializationError;
 
   @override
   bool get isInitialized => _isInitialized;
 
   @override
-  Object? get initializationError => _initializationError;
+  String? get initializationError => _initializationError;
 
   OpenAiClient(this._apiKey) {
     initialize();
