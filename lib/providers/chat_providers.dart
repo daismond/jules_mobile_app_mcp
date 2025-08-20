@@ -8,6 +8,7 @@ import 'package:flutter_chat_desktop/domains/chat/entity/chat_message.dart';
 import 'package:flutter_chat_desktop/domains/chat/entity/chat_state.dart';
 import 'package:flutter_chat_desktop/domains/mcp/entity/mcp_models.dart';
 import 'package:flutter_chat_desktop/domains/mcp/repository/mcp_repository.dart';
+import 'package:flutter_chat_desktop/domains/settings/entity/ai_config.dart';
 import 'package:flutter_chat_desktop/providers/ai_providers.dart';
 import 'package:flutter_chat_desktop/providers/mcp_providers.dart';
 import 'package:flutter_chat_desktop/providers/settings_providers.dart';
@@ -18,11 +19,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
   StreamSubscription<dynamic>? _messageSubscription;
 
   ChatNotifier(this._ref) : super(const ChatState()) {
-    state = state.copyWith(isApiKeySet: _ref.read(apiKeyProvider) != null);
+    final initialConfig = _ref.read(aiConfigProvider);
+    state = state.copyWith(
+      isApiKeySet:
+          initialConfig.currentApiKey != null && initialConfig.currentApiKey!.isNotEmpty,
+    );
 
-    _ref.listen<String?>(apiKeyProvider, (_, next) {
+    _ref.listen<AIConfig>(aiConfigProvider, (_, next) {
       if (mounted) {
-        state = state.copyWith(isApiKeySet: next != null);
+        state = state.copyWith(
+          isApiKeySet: next.currentApiKey != null && next.currentApiKey!.isNotEmpty,
+        );
       }
     });
 

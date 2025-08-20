@@ -20,66 +20,92 @@ class ChatInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (isLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: LinearProgressIndicator(),
-          ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  focusNode: focusNode,
-                  controller: controller,
-                  enabled: enabled,
-                  decoration: InputDecoration(
-                    hintText:
-                        isApiKeySet
-                            ? (isLoading
-                                ? 'Waiting for response...'
-                                : 'Enter your message...')
-                            : 'Set API Key in Settings...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20.0),
+    final theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        border: Border(top: BorderSide(color: theme.dividerColor, width: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          )
+        ],
+      ),
+      padding: const EdgeInsets.all(12.0),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8.0),
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: TextField(
+                    focusNode: focusNode,
+                    controller: controller,
+                    enabled: enabled,
+                    decoration: InputDecoration(
+                      hintText: isApiKeySet
+                          ? (isLoading
+                              ? 'Waiting for response...'
+                              : 'Enter your message...')
+                          : 'Set API Key in Settings...',
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24.0),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 14.0,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 12.0,
-                    ),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: enabled ? (_) => onSend() : null,
+                    minLines: 1,
+                    maxLines: 5,
+                    style: const TextStyle(fontSize: 16),
                   ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: enabled ? (_) => onSend() : null,
-                  minLines: 1,
-                  maxLines: 5,
+                ),
+                const SizedBox(width: 12.0),
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: enabled ? onSend : null,
+                    style: FilledButton.styleFrom(
+                      shape: const CircleBorder(),
+                      padding: EdgeInsets.zero,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                    ),
+                    child: const Icon(Icons.send, size: 24),
+                  ),
+                ),
+              ],
+            ),
+            if (!isApiKeySet)
+              Padding(
+                padding: const EdgeInsets.only(top: 12.0),
+                child: Text(
+                  'Please set your API Key in the Settings menu (⚙️) to start chatting.',
+                  style: TextStyle(color: theme.colorScheme.error),
+                  textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(width: 8.0),
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: enabled ? onSend : null,
-                tooltip: 'Send Message',
-              ),
-            ],
-          ),
+          ],
         ),
-        if (!isApiKeySet)
-          Padding(
-            padding: const EdgeInsets.only(
-              bottom: 8.0,
-              left: 16.0,
-              right: 16.0,
-            ),
-            child: Text(
-              'Please set your Gemini API Key in the Settings menu (⚙️) to start chatting.',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-              textAlign: TextAlign.center,
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

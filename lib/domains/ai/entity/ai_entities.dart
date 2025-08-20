@@ -1,6 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:google_generative_ai/google_generative_ai.dart' as sdk;
+
+/// Enum for why a model finished generating.
+enum FinishReason {
+  stop,
+  maxTokens,
+  safety,
+  recitation,
+  other,
+}
 
 /// Base class for schema definitions used in function declarations.
 @immutable
@@ -9,7 +18,7 @@ sealed class AiSchema {
   const AiSchema({this.description});
 
   /// Converts the domain schema to a Google Generative AI SDK schema
-  Schema toGoogleGenAi();
+  sdk.Schema toGoogleGenAi();
 
   /// Converts a JSON Schema map to an AiSchema instance
   static AiSchema? fromSchemaMap(Map<String, dynamic>? schemaMap) {
@@ -87,8 +96,8 @@ class AiObjectSchema extends AiSchema {
   });
 
   @override
-  Schema toGoogleGenAi() {
-    return Schema.object(
+  sdk.Schema toGoogleGenAi() {
+    return sdk.Schema.object(
       properties: properties.map((k, v) => MapEntry(k, v.toGoogleGenAi())),
       requiredProperties: requiredProperties,
       description: description,
@@ -121,10 +130,10 @@ class AiStringSchema extends AiSchema {
   const AiStringSchema({this.enumValues, super.description});
 
   @override
-  Schema toGoogleGenAi() {
+  sdk.Schema toGoogleGenAi() {
     return (enumValues != null && enumValues!.isNotEmpty)
-        ? Schema.enumString(enumValues: enumValues!, description: description)
-        : Schema.string(description: description);
+        ? sdk.Schema.enumString(enumValues: enumValues!, description: description)
+        : sdk.Schema.string(description: description);
   }
 
   @override
@@ -145,7 +154,7 @@ class AiNumberSchema extends AiSchema {
   const AiNumberSchema({super.description});
 
   @override
-  Schema toGoogleGenAi() => Schema.number(description: description);
+  sdk.Schema toGoogleGenAi() => sdk.Schema.number(description: description);
 
   @override
   bool operator ==(Object other) =>
@@ -163,7 +172,7 @@ class AiBooleanSchema extends AiSchema {
   const AiBooleanSchema({super.description});
 
   @override
-  Schema toGoogleGenAi() => Schema.boolean(description: description);
+  sdk.Schema toGoogleGenAi() => sdk.Schema.boolean(description: description);
 
   @override
   bool operator ==(Object other) =>
@@ -183,8 +192,8 @@ class AiArraySchema extends AiSchema {
   const AiArraySchema({required this.items, super.description});
 
   @override
-  Schema toGoogleGenAi() =>
-      Schema.array(items: items.toGoogleGenAi(), description: description);
+  sdk.Schema toGoogleGenAi() =>
+      sdk.Schema.array(items: items.toGoogleGenAi(), description: description);
 
   @override
   bool operator ==(Object other) =>
@@ -212,8 +221,8 @@ class AiFunctionDeclaration {
   });
 
   /// Converts to Google Generative AI SDK function declaration
-  FunctionDeclaration toGoogleGenAi() =>
-      FunctionDeclaration(name, description, parameters?.toGoogleGenAi());
+  sdk.FunctionDeclaration toGoogleGenAi() =>
+      sdk.FunctionDeclaration(name, description, parameters?.toGoogleGenAi());
 
   @override
   bool operator ==(Object other) =>
@@ -237,10 +246,10 @@ class AiTool {
   const AiTool({required this.functionDeclarations});
 
   /// Converts to Google Generative AI SDK tool
-  Tool toGoogleGenAi() {
+  sdk.Tool toGoogleGenAi() {
     final declarations =
         functionDeclarations.map((decl) => decl.toGoogleGenAi()).toList();
-    return Tool(functionDeclarations: declarations);
+    return sdk.Tool(functionDeclarations: declarations);
   }
 
   @override
@@ -263,14 +272,14 @@ sealed class AiPart {
   const AiPart();
 
   /// Converts to Google Generative AI SDK part
-  Part toGoogleGenAi();
+  sdk.Part toGoogleGenAi();
 
   /// Creates from Google Generative AI SDK part
-  static AiPart fromGoogleGenAi(Part part) {
+  static AiPart fromGoogleGenAi(sdk.Part part) {
     return switch (part) {
-      TextPart p => AiTextPart(p.text),
-      FunctionCall p => AiFunctionCallPart(name: p.name, args: p.args),
-      FunctionResponse p => AiFunctionResponsePart(
+      sdk.TextPart p => AiTextPart(p.text),
+      sdk.FunctionCall p => AiFunctionCallPart(name: p.name, args: p.args),
+      sdk.FunctionResponse p => AiFunctionResponsePart(
         name: p.name,
         response: p.response ?? {},
       ),
@@ -285,7 +294,7 @@ class AiTextPart extends AiPart {
   const AiTextPart(this.text);
 
   @override
-  Part toGoogleGenAi() => TextPart(text);
+  sdk.Part toGoogleGenAi() => sdk.TextPart(text);
 
   @override
   bool operator ==(Object other) =>
@@ -305,7 +314,7 @@ class AiFunctionCallPart extends AiPart {
   const AiFunctionCallPart({required this.name, required this.args});
 
   @override
-  Part toGoogleGenAi() => FunctionCall(name, args);
+  sdk.Part toGoogleGenAi() => sdk.FunctionCall(name, args);
 
   @override
   bool operator ==(Object other) =>
@@ -326,7 +335,7 @@ class AiFunctionResponsePart extends AiPart {
   const AiFunctionResponsePart({required this.name, required this.response});
 
   @override
-  Part toGoogleGenAi() => FunctionResponse(name, response);
+  sdk.Part toGoogleGenAi() => sdk.FunctionResponse(name, response);
 
   @override
   bool operator ==(Object other) =>
@@ -366,13 +375,13 @@ class AiContent {
   );
 
   /// Converts to Google Generative AI SDK content
-  Content toGoogleGenAi() {
+  sdk.Content toGoogleGenAi() {
     final sdkParts = parts.map((part) => part.toGoogleGenAi()).toList();
-    return Content(role, sdkParts);
+    return sdk.Content(role, sdkParts);
   }
 
   /// Creates from Google Generative AI SDK content
-  static AiContent fromGoogleGenAi(Content content) {
+  static AiContent fromGoogleGenAi(sdk.Content content) {
     final domainParts = content.parts.map(AiPart.fromGoogleGenAi).toList();
     return AiContent(role: content.role ?? 'unknown', parts: domainParts);
   }
@@ -400,22 +409,32 @@ class AiContent {
 @immutable
 class AiCandidate {
   final AiContent content;
+  final FinishReason? finishReason;
 
-  const AiCandidate({required this.content});
+  const AiCandidate({required this.content, this.finishReason});
+
+  static FinishReason? _mapGoogleFinishReason(sdk.FinishReason? reason) {
+    if (reason == null) return null;
+    return FinishReason.values.byName(reason.name);
+  }
 
   /// Creates from Google Generative AI SDK candidate
-  static AiCandidate fromGoogleGenAi(Candidate candidate) =>
-      AiCandidate(content: AiContent.fromGoogleGenAi(candidate.content));
+  static AiCandidate fromGoogleGenAi(sdk.Candidate candidate) =>
+      AiCandidate(
+        content: AiContent.fromGoogleGenAi(candidate.content),
+        finishReason: _mapGoogleFinishReason(candidate.finishReason),
+      );
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AiCandidate &&
           runtimeType == other.runtimeType &&
-          content == other.content;
+          content == other.content &&
+          finishReason == other.finishReason;
 
   @override
-  int get hashCode => content.hashCode;
+  int get hashCode => content.hashCode ^ finishReason.hashCode;
 }
 
 /// Represents the overall response from a non-streaming AI call.
@@ -426,7 +445,7 @@ class AiResponse {
   const AiResponse({required this.candidates});
 
   /// Creates from Google Generative AI SDK response
-  static AiResponse fromGoogleGenAi(GenerateContentResponse response) {
+  static AiResponse fromGoogleGenAi(sdk.GenerateContentResponse response) {
     final domainCandidates =
         response.candidates.map(AiCandidate.fromGoogleGenAi).toList();
     return AiResponse(candidates: domainCandidates);
@@ -452,21 +471,26 @@ class AiResponse {
 /// Represents a chunk of data received from a streaming AI call.
 @immutable
 class AiStreamChunk {
-  final String textDelta;
+  final String text;
+  final bool isFinish;
 
-  const AiStreamChunk({required this.textDelta});
+  const AiStreamChunk({required this.text, this.isFinish = false});
 
   /// Creates from Google Generative AI SDK chunk
-  static AiStreamChunk fromGoogleGenAi(GenerateContentResponse chunk) =>
-      AiStreamChunk(textDelta: chunk.text ?? "");
+  static AiStreamChunk fromGoogleGenAi(sdk.GenerateContentResponse chunk) =>
+      AiStreamChunk(
+        text: chunk.text ?? "",
+        isFinish: chunk.candidates.isNotEmpty && chunk.candidates.first.finishReason != null,
+      );
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AiStreamChunk &&
           runtimeType == other.runtimeType &&
-          textDelta == other.textDelta;
+          text == other.text &&
+          isFinish == other.isFinish;
 
   @override
-  int get hashCode => textDelta.hashCode;
+  int get hashCode => text.hashCode ^ isFinish.hashCode;
 }

@@ -43,7 +43,7 @@ class OpenAiClient implements AiClient {
     List<AiContent> history,
   ) {
     return history.map((content) {
-      final role = content.role == AiContent.userRole
+      final role = content.role == 'user'
           ? OpenAIChatMessageRole.user
           : OpenAIChatMessageRole.assistant;
 
@@ -113,7 +113,7 @@ class OpenAiClient implements AiClient {
       final textResponse = message.content?.map((p) => p.text).join() ?? '';
 
       final candidate = AiCandidate(
-        content: AiContent(role: AiContent.modelRole, parts: [AiPart(text: textResponse)]),
+        content: AiContent.model(textResponse),
         finishReason: _mapFinishReason(chatCompletion.choices.first.finishReason),
       );
 
